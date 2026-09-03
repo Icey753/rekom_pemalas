@@ -27,6 +27,8 @@ ENV/
 # Generated Reports & Output Artifacts
 rekomendasi_topik_skripsi_se.md
 rekomendasi_dosen_pembimbing.csv
+
+# Data besar di academic-papers-dataset (bisa di-regenerate lewat create_dataset.py)
 academic-papers-dataset/data/
 
 # OS Specific
@@ -43,6 +45,11 @@ $RECYCLE.BIN/
 !*.py
 !requirements.txt
 !chromedriver.exe
+# Biarkan script & config di subfolder academic-papers-dataset tetap terlacak
+!academic-papers-dataset/*.py
+!academic-papers-dataset/requirements.txt
+!academic-papers-dataset/README.md
+!academic-papers-dataset/.gitattributes
 !THIRD_PARTY_NOTICES.chromedriver
 !readme.md
 !README.md
