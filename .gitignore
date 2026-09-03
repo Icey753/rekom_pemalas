@@ -1,0 +1,49 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# IDE & Editor settings
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Large PDF Files
+*.pdf
+
+# Datasets & Crawled/Preprocessed Data files (CSV, JSON, JSONL, Parquet)
+*.csv
+*.json
+*.jsonl
+*.parquet
+
+# Generated Reports & Output Artifacts
+rekomendasi_topik_skripsi_se.md
+rekomendasi_dosen_pembimbing.csv
+academic-papers-dataset/data/
+
+# OS Specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Logs
+*.log
+
+# EXCLUSIONS / WHITELIST (Pastikan Python Scripts & Chromedriver tetap terlacak)
+!*.py
+!requirements.txt
+!chromedriver.exe
+!THIRD_PARTY_NOTICES.chromedriver
+!readme.md
+!README.md
+!.gitignore
