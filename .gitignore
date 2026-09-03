@@ -29,7 +29,12 @@ rekomendasi_topik_skripsi_se.md
 rekomendasi_dosen_pembimbing.csv
 
 # Data besar di academic-papers-dataset (bisa di-regenerate lewat create_dataset.py)
+# File-file ini terus membesar setiap kali create_dataset.py dijalankan
 academic-papers-dataset/data/
+academic-papers-dataset/*.csv
+academic-papers-dataset/*.json
+academic-papers-dataset/*.jsonl
+academic-papers-dataset/*.parquet
 
 # OS Specific
 Thumbs.db
