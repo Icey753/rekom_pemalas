@@ -1,6 +1,57 @@
 # 🎓 Skripsi & SOTA Academic Research Intelligence Toolkit
 
-Toolkit terpadu untuk scraping repositori skripsi lokal (GitLab STIS & PDF Executive Summary), ekstraksi minat penelitian dosen resmi dari 3 prodi, penggabungan dataset paper SOTA internasional (ArXiv CS/SE/AI), serta sistem rekomendasi topik skripsi **Software Engineering (SE) & Data Engineering**.
+Toolkit terpadu untuk scraping repositori skripsi lokal (GitLab STIS & PDF Executive Summary), ekstraksi minat penelitian dosen resmi dari 3 prodi, penggabungan dataset paper SOTA internasional (ArXiv CS/SE/AI), serta sistem rekomendasi topik skripsi dengan **skema klasifikasi dua label utama: Data Science & Software Engineering**.
+
+---
+
+## 🏷️ Arsitektur Klasifikasi Label Topik
+
+Dataset menggunakan dua **label utama** dengan sistem sub-label hierarkis:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Label Utama 1 ─ DATA SCIENCE                                           │
+│  (Topik analitik, pemodelan, dan kecerdasan buatan)                     │
+│                                                                         │
+│    ├── Machine Learning & Predictive Modeling                           │
+│    ├── NLP, LLM & Text Mining                                           │
+│    ├── Computer Vision & Remote Sensing                                 │
+│    ├── Time Series & Forecasting                                        │
+│    ├── Spatial & Spatio-Temporal Analysis                               │
+│    └── Small Area Estimation (SAE)                                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Label Utama 2 ─ SOFTWARE ENGINEERING                                   │
+│  (Semua topik rekayasa sistem, termasuk System Information,             │
+│   Computer Science generik, dan semua varian pengembangan software)     │
+│                                                                         │
+│    ├── Backend, Microservices & Web API                                 │
+│    ├── Frontend & Modern Web Architecture                               │
+│    ├── Mobile Application & CAPI Systems                                │
+│    ├── Enterprise Systems & Gov-Tech  ← System Information masuk sini  │
+│    ├── Data Engineering, ETL & Big Data Storage                         │
+│    ├── Web Scraping & Data Ingestion Engine                             │
+│    ├── Automation, Pipeline & Orchestration                             │
+│    ├── UI/UX, UCD & Usability Engineering                               │
+│    ├── Statistical Software & Package Engineering                       │
+│    ├── Software Security & Defensive Engineering                        │
+│    ├── Software Testing & Automated QA                                  │
+│    └── Developer Tooling & Static Analysis                              │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+> **Catatan:** Skripsi yang bersifat **lintas topik** (misal: MLOps, Data Pipeline AI) akan mendapatkan **multi-label** — yaitu `"Data Science; Software Engineering"` — secara otomatis.
+
+---
+
+## 📊 Kolom Label di Dataset Output
+
+| Kolom | Tipe | Contoh Nilai |
+| :--- | :--- | :--- |
+| `main_label` | `str` | `"Data Science"` / `"Software Engineering"` / `"Data Science; Software Engineering"` |
+| `sub_labels` | `str` | `"Machine Learning & Predictive Modeling; Backend, Microservices & Web API"` |
+| `se_automation_tags` | `str` | Sub-label Software Engineering yang match (backward-compat) |
+| `ai_analytics_tags` | `str` | Sub-label Data Science yang match (backward-compat) |
+| `application_sector_tags` | `str` | Sektor aplikasi (BPS, Kemiskinan, Ekonomi, dll.) |
 
 ---
 
@@ -17,10 +68,12 @@ Toolkit terpadu untuk scraping repositori skripsi lokal (GitLab STIS & PDF Execu
               └───────────────────────┬───────┴─────────────────────────┘
                                       ▼
                      [ preprocess_skripsi.py ] + [ preprocess_academic_papers.py ]
+                          │ assign_main_label() → main_label + sub_labels
                                       ▼
                            [ orchestrate_dataset.py ]
                                       ▼
                  [ dataset_unified_skripsi_dan_papers.csv ]
+                          main_label | sub_labels | discipline | ...
                                       ▼
                            [ plan_se_topics.py ]
                                       ▼
@@ -49,12 +102,17 @@ Toolkit terpadu untuk scraping repositori skripsi lokal (GitLab STIS & PDF Execu
 ├── crawl_pdf_dosen.py                      # Ekstraksi pasangan dosen pembimbing & judul dari PDF
 ├── scrape_minat_dosen.py                   # Scraper profil & minat penelitian dosen (KS, S, D3)
 │
-│── ─────── DATA PREPROCESSING ──────────────────────────────────────
+│── ─────── DATA PREPROCESSING & LABELING ───────────────────────────
 │
-├── preprocess_skripsi.py                   # Standardisasi & tagging dataset skripsi lokal
+├── preprocess_skripsi.py                   # Standardisasi, tagging & assign main_label + sub_labels
+│                                           #   └ TAXONOMY_DATA_SCIENCE  → label "Data Science"
+│                                           #   └ TAXONOMY_SOFTWARE_ENGINEERING → label "Software Engineering"
+│                                           #   └ assign_main_label() → logika multi-label otomatis
 ├── preprocess_academic_papers.py           # Ingestion, filter & tagging paper ArXiv internasional
 ├── fill_empty_description.py               # Pengisian deskripsi kosong menggunakan fallback
 ├── orchestrate_dataset.py                  # Penggabungan seluruh sumber dataset menjadi satu CSV
+│                                           #   └ Membaca main_label dari preprocess_skripsi
+│                                           #   └ Kolom baru: main_label, sub_labels
 │
 │── ─────── RECOMMENDATION ENGINE ───────────────────────────────────
 │
@@ -195,11 +253,12 @@ python scrape_skripsi.py --group ks/skripsi2023 --out hasil_2023.json
 
 ---
 
-### Langkah E — Preprocessing Data Skripsi & Paper
-Standardisasi kolom, normalisasi teks, dan pemberian tag domain secara otomatis:
+### Langkah E — Preprocessing & Pelabelan Otomatis
+Standardisasi kolom, normalisasi teks, dan assign **label utama + sub-label** secara otomatis:
 
 ```bash
-# Preprocessing skripsi lokal (dari JSON hasil scraping / PDF)
+# Preprocessing & labeling skripsi lokal
+# → Menghasilkan kolom: main_label, sub_labels, se_automation_tags, ai_analytics_tags
 python preprocess_skripsi.py
 
 # Preprocessing paper ArXiv internasional
@@ -208,6 +267,15 @@ python preprocess_academic_papers.py
 # (Opsional) Isi kolom deskripsi/abstrak yang masih kosong
 python fill_empty_description.py
 ```
+
+**Logika assign_main_label():**
+
+| Kondisi | `main_label` |
+| :--- | :--- |
+| Hanya match `TAXONOMY_DATA_SCIENCE` | `"Data Science"` |
+| Hanya match `TAXONOMY_SOFTWARE_ENGINEERING` | `"Software Engineering"` |
+| Match kedua taksonomi (overlap/MLOps) | `"Data Science; Software Engineering"` |
+| Tidak match keduanya | `"Software Engineering"` *(fallback)* |
 
 ---
 
@@ -221,6 +289,14 @@ python orchestrate_dataset.py
 **Output:**
 - `dataset_unified_skripsi_dan_papers.csv` *(~16 MB)*
 - `dataset_unified_skripsi_dan_papers.json` *(~18 MB)*
+
+Kolom baru yang ditambahkan:
+
+| Kolom | Keterangan |
+| :--- | :--- |
+| `main_label` | Label utama: `Data Science` / `Software Engineering` / keduanya |
+| `sub_labels` | Sub-label detail yang match dari taksonomi |
+| `discipline` | Sama dengan `main_label` (kompatibel dengan `plan_se_topics.py`) |
 
 ---
 
@@ -276,3 +352,4 @@ page.wait_for_load_state("networkidle")
 - **Positioning:** Selalu tegaskan ke dosen bahwa fokus riset Anda adalah **arsitektur software, throughput pipeline, data lineage, atau reusabilitas package** — bukan sekadar melatih model.
 - **Bawa Diagram:** Lampirkan sketsa arsitektur sistem (*C4 Model, Sequence Diagram, atau Data Pipeline Flowchart*) saat bimbingan pertama.
 - **Bukti SOTA:** Gunakan rujukan paper ArXiv 2025/2026 yang sudah terangkum di `rekomendasi_topik_skripsi_se.md` sebagai dasar urgensi ilmiah.
+- **Label yang Tepat:** Jika topik Anda lintas domain (misal MLOps pipeline), manfaatkan multi-label `"Data Science; Software Engineering"` untuk menjangkau dosen dari kedua bidang.

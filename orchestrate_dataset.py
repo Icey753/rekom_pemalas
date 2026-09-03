@@ -2,7 +2,7 @@ import json
 import re
 import pandas as pd
 from pathlib import Path
-from preprocess_skripsi import preprocess_all_datasets
+from preprocess_skripsi import preprocess_all_datasets, assign_main_label
 from preprocess_academic_papers import preprocess_academic_papers
 
 def clean_text(text):
@@ -56,15 +56,32 @@ def orchestrate_unified_dataset():
         sec_tags = clean_text(row.get('application_sector_tags', ''))
         all_tags = clean_text(row.get('all_tags', ''))
         
-        # Tentukan disiplin utama berdasarkan tags
-        if se_tags:
-            discipline = "Software Engineering & Systems"
-        elif "Small Area" in ai_tags or "Spatial" in ai_tags or "Time Series" in ai_tags:
-            discipline = "Statistical Computing & Methodology"
-        elif ai_tags:
-            discipline = "Artificial Intelligence & Data Science"
+        # Tentukan disiplin utama berdasarkan main_label baru
+        main_labels_raw = row.get('main_label', '')
+        if pd.isna(main_labels_raw) or not main_labels_raw:
+            main_labels_list = ["Software Engineering"]
+        elif isinstance(main_labels_raw, str):
+            main_labels_list = [m.strip() for m in main_labels_raw.split(';') if m.strip()]
         else:
-            discipline = "Applied Statistics & Information Systems"
+            main_labels_list = ["Software Engineering"]
+
+        sub_labels_raw = row.get('sub_labels', '')
+        if pd.isna(sub_labels_raw) or not sub_labels_raw:
+            sub_labels_str = ""
+        elif isinstance(sub_labels_raw, str):
+            sub_labels_str = sub_labels_raw
+        else:
+            sub_labels_str = str(sub_labels_raw)
+
+        # Tentukan discipline display
+        if "Data Science" in main_labels_list and "Software Engineering" in main_labels_list:
+            discipline = "Data Science & Software Engineering"
+        elif "Data Science" in main_labels_list:
+            discipline = "Data Science"
+        elif "Software Engineering" in main_labels_list:
+            discipline = "Software Engineering"
+        else:
+            discipline = "Software Engineering"  # fallback
             
         unified_records.append({
             "id": paper_id,
@@ -76,6 +93,10 @@ def orchestrate_unified_dataset():
             "authors": authors,
             "supervisor": supervisor,
             "abstract_or_summary": content_text,
+            # ── Label utama baru ──────────────────────────────────────────
+            "main_label": "; ".join(main_labels_list),   # 'Data Science' / 'Software Engineering' / keduanya
+            "sub_labels": sub_labels_str,                # sub-label detail
+            # ── Backward-compat ───────────────────────────────────────────
             "discipline": discipline,
             "primary_category": ai_tags.split(';')[0].strip() if ai_tags else (se_tags.split(';')[0].strip() if se_tags else "Applied Computing"),
             "se_automation_tags": se_tags,
@@ -83,7 +104,7 @@ def orchestrate_unified_dataset():
             "application_sector_tags": sec_tags,
             "all_tags": all_tags,
             "url_or_reference": clean_text(row.get('raw_reference', '')),
-            "search_corpus": f"[LOKAL - {year}] {title} | {authors} | Pembimbing: {supervisor} | {content_text} | Tags: {all_tags}"
+            "search_corpus": f"[LOKAL - {year}] {title} | {authors} | Pembimbing: {supervisor} | Label: {'; '.join(main_labels_list)} | {content_text} | Tags: {all_tags}"
         })
         
     # -------------------------------------------------------------
@@ -117,6 +138,10 @@ def orchestrate_unified_dataset():
             "authors": authors,
             "supervisor": "",
             "abstract_or_summary": abstract,
+            # ── Label utama baru: assign via assign_main_label dari konten paper ─
+            "main_label": discipline if discipline else "Software Engineering",
+            "sub_labels": primary_cat_name,
+            # ── Backward-compat ───────────────────────────────────────────────────
             "discipline": discipline,
             "primary_category": f"{primary_cat_code} - {primary_cat_name}",
             "se_automation_tags": se_tag,
@@ -148,6 +173,9 @@ def orchestrate_unified_dataset():
 
     print("\nDistribusi Berdasarkan Origin & Disiplin:")
     print(pd.crosstab(df_unified['origin'], df_unified['discipline']))
+
+    print("\nDistribusi Label Utama (main_label):")
+    print(df_unified['main_label'].value_counts())
 
 if __name__ == '__main__':
     orchestrate_unified_dataset()
